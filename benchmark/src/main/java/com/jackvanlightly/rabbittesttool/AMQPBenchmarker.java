@@ -16,9 +16,17 @@ import com.jackvanlightly.rabbittesttool.topology.*;
 import com.jackvanlightly.rabbittesttool.topology.model.StepOverride;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
+import com.sun.net.httpserver.HttpServer;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheus.rsocket.PrometheusRSocketClient;
+import io.rsocket.transport.netty.client.TcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +50,11 @@ public class AMQPBenchmarker {
 
         arguments.printArguments();
 
+        PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        PrometheusRSocketClient client = new PrometheusRSocketClient(prometheusRegistry,
+                TcpClientTransport.create("proxyhost", 7001),
+                c -> c.retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(10), Duration.ofMinutes(10)));
+
         String mode = arguments.getStr("--mode");
         switch (mode) {
             case Modes.Benchmark:
@@ -58,6 +71,7 @@ public class AMQPBenchmarker {
                 System.exit(1);
         }
 
+        client.pushAndClose();
         System.exit(0);
     }
 
@@ -506,6 +520,23 @@ public class AMQPBenchmarker {
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private static void startPrometheusEndpoint(PrometheusMeterRegistry prometheusRegistry) {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+            server.createContext("/prometheus", httpExchange -> {
+                String response = prometheusRegistry.scrape();
+                httpExchange.sendResponseHeaders(200, response.getBytes().length);
+                try (OutputStream os = httpExchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            });
+
+            new Thread(server::start).start();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
