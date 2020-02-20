@@ -1,6 +1,7 @@
 FROM maven:3.6-jdk-8 as builder
 
-COPY benchmark /workspace
+COPY benchmark/pom.xml /workspace/pom.xml
+COPY benchmark/src /workspace/src
 
 WORKDIR /workspace
 

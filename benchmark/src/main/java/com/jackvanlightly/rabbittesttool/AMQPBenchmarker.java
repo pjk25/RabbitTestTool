@@ -50,10 +50,16 @@ public class AMQPBenchmarker {
 
         arguments.printArguments();
 
-        PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-        PrometheusRSocketClient client = new PrometheusRSocketClient(prometheusRegistry,
-                TcpClientTransport.create("proxyhost", 7001),
-                c -> c.retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(10), Duration.ofMinutes(10)));
+        Optional<PrometheusRSocketClient> client = Optional
+                .ofNullable(arguments.hasKey("--rsocket-proxy-host") ?
+                        arguments.getStr("--rsocket-proxy-host") : null)
+                .map(host -> {
+                    PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+                    Integer port = arguments.getInt("--rsocket-proxy-port", 7001);
+                    return new PrometheusRSocketClient(prometheusRegistry,
+                            TcpClientTransport.create(host, port),
+                            c -> c.retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(10), Duration.ofMinutes(5)));
+                });
 
         String mode = arguments.getStr("--mode");
         switch (mode) {
@@ -71,7 +77,8 @@ public class AMQPBenchmarker {
                 System.exit(1);
         }
 
-        client.pushAndClose();
+        client.ifPresent(PrometheusRSocketClient::pushAndClose);
+
         System.exit(0);
     }
 

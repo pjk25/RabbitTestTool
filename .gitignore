@@ -51,3 +51,4 @@ target/
 .terraform
 
 __pycache__/
+/venv/

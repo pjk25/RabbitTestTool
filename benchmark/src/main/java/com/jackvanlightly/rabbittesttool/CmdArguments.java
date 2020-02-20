@@ -33,6 +33,7 @@ public class CmdArguments {
         printStream.println(" + Broker connection details (mandatory)");
         printStream.println(" + Postgres connection details (mandatory). Storing results in Postgres allows for keeping track of previous runs and running statistical comparisons of different runs.");
         printStream.println(" + InfluxDB connection details (optional). Sending of metrics to InfluxDB is not required but can add a lot of value.");
+        printStream.println(" + prometheus-rsocket-proxy connection details (optional). Sending of metrics to Prometheus is not required but can add a lot of value. The proxy allows metrics push at the end of a benchmark.");
         printStream.println(" + Used in logging and tagging of results and metrics (mandatory)");
         printStream.println("");
         printStream.println("Arguments can be passed via the command line and/or a JSON configuration file. Command line arguments take precedence over configuration file arguments when they exist in both.");
@@ -69,6 +70,10 @@ public class CmdArguments {
         printStream.println("--metrics-influx-password  The influxdb password");
         printStream.println("--metrics-influx-database  The influxdb database");
         printStream.println("--metrics-influx-interval  The interval (seconds) to post metrics to influx. 10 is a good value.");
+        printStream.println("");
+        printStream.println("Prometheus rsocket connection (optional):");
+        printStream.println("--rsocket-proxy-host       The rsocket proxy host");
+        printStream.println("--rsocket-proxy-port       The rsocket proxy port");
         printStream.println("");
         printStream.println("Logging and tagging arguments:");
         printStream.println("--run-id           The identifier of the run that this benchmark is a part of. A single run can include multiple benchmarks.");
